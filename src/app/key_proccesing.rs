@@ -5,7 +5,6 @@ use super::{App, AppState, AppStatus};
 use core::panic;
 use std::process::Command;
 
-use color_eyre::install;
 use ratatui::crossterm::event::KeyModifiers;
 use ratatui::crossterm::event::{self, KeyEvent};
 
@@ -59,6 +58,21 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
                 app.app_state = AppState::Input;
             } else {
                 app.input_queue.push('е');
+            }
+        }
+
+        event::KeyCode::Char('i') => {
+            if app.app_state != AppState::Input {
+                app.app_state = AppState::Input;
+            } else {
+                app.input_queue.push('i');
+            }
+        }
+        event::KeyCode::Char('ш') => {
+            if app.app_state != AppState::Input {
+                app.app_state = AppState::Input;
+            } else {
+                app.input_queue.push('ш');
             }
         }
 

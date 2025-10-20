@@ -35,7 +35,28 @@ pub fn render_input(area: Rect, buf: &mut Buffer, app: &App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .title_top({
+            .title_top({
+
+        let output = std::process::Command::new("bash")
+            .arg("-c")
+            .arg("swaymsg -t get_inputs | jq -r '.[] | select(.type==\"keyboard\") | .xkb_active_layout_name' | tail -n 1")
+            .output().expect("error get layout name");
+
+
+            if output.status.success() {
+                let output = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+                if output == "English (US)" {
+                    String::from("English")
+                } else {
+                    output
+                }
+            } else {
+                panic!("error get layout name");
+            }
+
+            })
+        .title_bottom({
             if app.app_state == AppState::Input {
                 String::from("input")
             } else {
@@ -46,7 +67,6 @@ pub fn render_input(area: Rect, buf: &mut Buffer, app: &App) {
         .border_type(BorderType::Plain);
 
     Paragraph::new(app.input_queue.clone())
-        .alignment(Alignment::Center)
         .block(block)
         .style(style)
         .render(horizontal_chunks[1], buf);
