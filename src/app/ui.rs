@@ -10,10 +10,19 @@ use crate::app::{App, AppState};
 pub fn render_tip(area: Rect, buf: &mut Buffer, app: &App) {
     let style = get_style(app);
     let title = {
-        match app.app_status {
-            super::AppStatus::DuckDuckGo => String::from("󰇥  DuckDuckGo!"),
-            super::AppStatus::NixOS => String::from("  NixOS!"),
-            super::AppStatus::Translate => String::from("󰊿  Translate!"),
+        match app.input_queue.as_str() {
+            "re" | "ку" => String::from("  Reddit!"),
+            "vk" | "мл" => String::from("  Vk!"),
+            "go" | "пщ" => String::from("  Google Ai!"),
+            "du" | "вг" => String::from("  Duck Ai!"),
+            "2ch" | "2ср" => String::from("󱐋  2ch!"),
+            "git" | "пше" => String::from("  GitHub!"),
+            "sdo" | "ывщ" => String::from("  Sdo..."),
+            _ => match app.app_status {
+                super::AppStatus::DuckDuckGo => String::from("󰇥  DuckDuckGo!"),
+                super::AppStatus::NixOS => String::from("  NixOS!"),
+                super::AppStatus::Translate => String::from("󰊿  Translate!"),
+            },
         }
     };
 
@@ -24,13 +33,6 @@ pub fn render_tip(area: Rect, buf: &mut Buffer, app: &App) {
 }
 
 pub fn render_input(area: Rect, buf: &mut Buffer, app: &App) {
-    let horizontal_chunks = Layout::horizontal([
-        Constraint::Fill(1),
-        Constraint::Fill(2),
-        Constraint::Fill(1),
-    ])
-    .split(area);
-
     let style = get_style(app);
 
     let block = Block::default()
@@ -66,20 +68,29 @@ pub fn render_input(area: Rect, buf: &mut Buffer, app: &App) {
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Plain);
 
-    Paragraph::new(app.input_queue.clone())
+    Paragraph::new(String::from("  ") + &app.input_queue.clone())
         .block(block)
         .style(style)
-        .render(horizontal_chunks[1], buf);
+        .render(area, buf);
 }
 
 fn get_style(app: &App) -> ratatui::prelude::Style {
     Style {
         fg: {
             if app.app_state != AppState::Normal {
-                match app.app_status {
-                    super::AppStatus::DuckDuckGo => Some(Color::LightYellow),
-                    super::AppStatus::NixOS => Some(Color::LightBlue),
-                    super::AppStatus::Translate => Some(Color::LightRed),
+                match app.input_queue.as_str() {
+                    "re" | "ку" => Some(Color::LightRed),
+                    "vk" | "мл" => Some(Color::LightBlue),
+                    "go" | "пщ" => Some(Color::LightBlue),
+                    "du" | "вг" => Some(Color::Yellow),
+                    "git" | "пше" => Some(Color::LightMagenta),
+                    "2ch" | "2ср" => Some(Color::Rgb(254, 145, 18)),
+                    "sdo" | "ывщ" => Some(Color::Gray),
+                    _ => match app.app_status {
+                        super::AppStatus::DuckDuckGo => Some(Color::LightYellow),
+                        super::AppStatus::NixOS => Some(Color::Blue),
+                        super::AppStatus::Translate => Some(Color::LightRed),
+                    },
                 }
             } else {
                 Some(Color::Gray)

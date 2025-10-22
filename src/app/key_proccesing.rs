@@ -5,113 +5,68 @@ use super::{App, AppState, AppStatus};
 use core::panic;
 use std::process::Command;
 
-use ratatui::crossterm::event::KeyModifiers;
-use ratatui::crossterm::event::{self, KeyEvent};
+use ratatui::crossterm::event::{self, KeyEvent, KeyModifiers};
 
 pub fn handle_key_event(app: &mut App, key: KeyEvent) {
     match key.code {
-        event::KeyCode::Char('d') => {
+        event::KeyCode::Char(ch) => {
             if app.app_state != AppState::Input {
-                app.app_status = AppStatus::DuckDuckGo;
-                app.app_state = AppState::Input;
+                match ch {
+                    'd' | 'в' => {
+                        search(app, "duckduckgo".to_string());
+                    }
+                    'n' | 'т' => {
+                        search(app, "nixos".to_string());
+                    }
+                    't' | 'е' => {
+                        search(app, "translate".to_string());
+                    }
+                    'i' | 'ш' => app.app_state = AppState::Input,
+                    'p' | 'з' => paste(app),
+
+                    'l' | 'д' => move_cursor_right(app),
+                    'h' | 'р' => move_cursor_left(app),
+
+                    'I' | 'Ш' => {
+                        app.character_index = 0;
+                        app.app_state = AppState::Input
+                    }
+                    'A' | 'Ф' => {
+                        app.character_index = app.input_queue.chars().count();
+                        app.app_state = AppState::Input
+                    }
+                    _ => {}
+                }
+            } else if key.modifiers == KeyModifiers::CONTROL {
+                match ch {
+                    'l' | 'д' => move_cursor_right(app),
+                    'h' | 'р' => move_cursor_left(app),
+                    'u' | 'г' => {
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            app.input_queue = app.input_queue[app.character_index..].to_string();
+                            app.character_index = 0;
+                        }
+                    }
+                    _ => (),
+                }
             } else {
-                app.input_queue.push('d');
-            }
-        }
-        event::KeyCode::Char('в') => {
-            if app.app_state != AppState::Input {
-                app.app_status = AppStatus::DuckDuckGo;
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('в');
+                app.input_queue.push(ch);
+                move_cursor_right(app)
             }
         }
 
-        event::KeyCode::Char('n') => {
-            if app.app_state != AppState::Input {
-                app.app_status = AppStatus::NixOS;
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('n');
-            }
-        }
-        event::KeyCode::Char('т') => {
-            if app.app_state != AppState::Input {
-                app.app_status = AppStatus::NixOS;
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('т');
-            }
-        }
-
-        event::KeyCode::Char('t') => {
-            if app.app_state != AppState::Input {
-                app.app_status = AppStatus::Translate;
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('t');
-            }
-        }
-        event::KeyCode::Char('е') => {
-            if app.app_state != AppState::Input {
-                app.app_status = AppStatus::Translate;
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('е');
-            }
-        }
-
-        event::KeyCode::Char('i') => {
-            if app.app_state != AppState::Input {
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('i');
-            }
-        }
-        event::KeyCode::Char('ш') => {
-            if app.app_state != AppState::Input {
-                app.app_state = AppState::Input;
-            } else {
-                app.input_queue.push('ш');
-            }
-        }
-
-        event::KeyCode::Char('p') => {
-            if app.app_state != AppState::Input {
-                paste(app);
-            } else {
-                app.input_queue.push('р');
-            }
-        }
-        event::KeyCode::Char('з') => {
-            if app.app_state != AppState::Input {
-                paste(app);
-            } else {
-                app.input_queue.push('з');
-            }
-        }
         event::KeyCode::Esc => {
             if app.app_state == AppState::Input {
-                app.app_state = AppState::Normal
+                app.app_state = AppState::Normal;
+                app.character_index = app.character_index.saturating_sub(1);
             } else {
                 app.app_state = AppState::Quit
             }
         }
 
-        event::KeyCode::Char('u') if key.modifiers == KeyModifiers::CONTROL => {
+        event::KeyCode::Backspace => {
             if app.app_state == AppState::Input {
-                app.input_queue = "".to_string();
-            }
-        }
-        event::KeyCode::Char('г') if key.modifiers == KeyModifiers::CONTROL => {
-            if app.app_state == AppState::Input {
-                app.input_queue = "".to_string();
-            }
-        }
-
-        event::KeyCode::Char(to_insert) => {
-            if app.app_state == AppState::Input {
-                app.input_queue.push(to_insert);
+                delete_char(app);
             }
         }
 
@@ -125,12 +80,39 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
     }
 }
 
+fn delete_char(app: &mut App) {
+    if app.character_index != 0 {
+        let current_index = app.character_index;
+        let from_left_to_current_index = current_index - 1;
+
+        let before_char_to_delete = app.input_queue.chars().take(from_left_to_current_index);
+        let after_char_to_delete = app.input_queue.chars().skip(current_index);
+
+        app.input_queue = before_char_to_delete.chain(after_char_to_delete).collect();
+        move_cursor_left(app);
+    }
+}
+
+fn move_cursor_left(app: &mut App) {
+    let cursor_moved_left = app.character_index.saturating_sub(1);
+    app.character_index = clamp_cursor(app, cursor_moved_left);
+}
+
+fn move_cursor_right(app: &mut App) {
+    let cursor_moved_right = app.character_index.saturating_add(1);
+    app.character_index = clamp_cursor(app, cursor_moved_right);
+}
+
+fn clamp_cursor(app: &App, new_cursor_pos: usize) -> usize {
+    new_cursor_pos.clamp(0, app.input_queue.chars().count())
+}
+
 fn duckduckgo(app: &mut App) {
     match app.input_queue.as_str() {
         "go" | "пщ" => {
             queue_commmand("https://aistudio.google.com/prompts/new_chat".to_string());
         }
-        "r" | "к" => {
+        "re" | "ку" => {
             queue_commmand("https://old.reddit.com/".to_string());
         }
         "de" | "ву" => {
@@ -233,4 +215,25 @@ fn queue_commmand(queue: String) {
         .arg(queue)
         .status()
         .expect("panic!");
+}
+
+fn search(app: &mut App, search: String) {
+    match search.as_str() {
+        "duckduckgo" => {
+            app.app_status = AppStatus::DuckDuckGo;
+            app.app_state = AppState::Input;
+            app.character_index = app.input_queue.chars().count();
+        }
+        "nixos" => {
+            app.app_status = AppStatus::NixOS;
+            app.app_state = AppState::Input;
+            app.character_index = app.input_queue.chars().count();
+        }
+        "translate" => {
+            app.app_status = AppStatus::Translate;
+            app.app_state = AppState::Input;
+            app.character_index = app.input_queue.chars().count();
+        }
+        _ => (),
+    }
 }

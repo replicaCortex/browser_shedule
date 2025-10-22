@@ -2,10 +2,12 @@ mod key_proccesing;
 
 mod ui;
 
+use std::io::stdout;
 use std::sync::mpsc;
 use std::thread;
 
-use color_eyre::eyre::{Ok, Result};
+use color_eyre::eyre::Result;
+use crossterm::execute;
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::Event;
 use ratatui::crossterm::event::{self, KeyEvent};
@@ -37,6 +39,7 @@ pub struct App {
     app_status: AppStatus,
 
     input_queue: String,
+    character_index: usize,
 }
 
 impl App {
@@ -46,7 +49,7 @@ impl App {
         rc: mpsc::Receiver<AppEvent>,
     ) -> Result<()> {
         while self.is_runing() {
-            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+            terminal.draw(|frame| Self::render_ui(&self, frame))?;
 
             match rc.recv().unwrap() {
                 AppEvent::Key(key_event) => key_proccesing::handle_key_event(&mut self, key_event),
@@ -56,16 +59,10 @@ impl App {
         Ok(())
     }
 
-    fn is_runing(&self) -> bool {
-        self.app_state == AppState::Normal || self.app_state == AppState::Input
-    }
-}
+    fn render_ui(&self, frame: &mut Frame) {
+        let area = frame.area();
+        let buf = frame.buffer_mut();
 
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
         let vertical_chunks = Layout::vertical([
             Constraint::Fill(1),
             Constraint::Length(1),
@@ -76,8 +73,32 @@ impl Widget for &App {
         ])
         .split(area);
 
+        let horizontal_chunks = Layout::horizontal([
+            Constraint::Fill(1),
+            Constraint::Fill(2),
+            Constraint::Fill(1),
+        ])
+        .split(vertical_chunks[3]);
+
         ui::render_tip(vertical_chunks[1], buf, self);
-        ui::render_input(vertical_chunks[3], buf, self);
+        ui::render_input(horizontal_chunks[1], buf, self);
+
+        match self.app_state {
+            AppState::Input => execute!(stdout(), crossterm::cursor::SetCursorStyle::SteadyBar)
+                .expect("error set cursor style (steadebar)"),
+            AppState::Normal => execute!(stdout(), crossterm::cursor::SetCursorStyle::SteadyBlock)
+                .expect("error set cursor style (steadyblock)"),
+            _ => (),
+        };
+
+        frame.set_cursor_position(Position {
+            x: horizontal_chunks[1].x + self.character_index as u16 + 4,
+            y: horizontal_chunks[1].y + 1,
+        });
+    }
+
+    fn is_runing(&self) -> bool {
+        self.app_state == AppState::Normal || self.app_state == AppState::Input
     }
 }
 
