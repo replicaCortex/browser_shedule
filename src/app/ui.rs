@@ -1,6 +1,6 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Rect},
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph, Widget},
 };
@@ -12,6 +12,8 @@ pub fn render_tip(area: Rect, buf: &mut Buffer, app: &App) {
     let title = {
         match app.input_queue.as_str() {
             "re" | "ку" => String::from("  Reddit!"),
+            "nix" | "тшч" => String::from("  NixOS!"),
+            "tr" | "ек" => String::from("󰊿  Translate!"),
             "vk" | "мл" => String::from("  Vk!"),
             "go" | "пщ" => String::from("  Google Ai!"),
             "du" | "вг" => String::from("  Duck Ai!"),
@@ -80,6 +82,8 @@ fn get_style(app: &App) -> ratatui::prelude::Style {
             if app.app_state != AppState::Normal {
                 match app.input_queue.as_str() {
                     "re" | "ку" => Some(Color::LightRed),
+                    "nix" | "тшч" => Some(Color::Blue),
+                    "tr" | "ек" => Some(Color::White),
                     "vk" | "мл" => Some(Color::LightBlue),
                     "go" | "пщ" => Some(Color::LightBlue),
                     "du" | "вг" => Some(Color::Yellow),

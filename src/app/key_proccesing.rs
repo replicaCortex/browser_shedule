@@ -1,4 +1,5 @@
 const BROWSER: &str = "zen";
+const SWAY: &str = "swaymsg";
 
 use super::{App, AppState, AppStatus};
 
@@ -43,7 +44,11 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
                     'h' | 'р' => move_cursor_left(app),
                     'u' | 'г' => {
                         if key.modifiers == KeyModifiers::CONTROL {
-                            app.input_queue = app.input_queue[app.character_index..].to_string();
+                            app.input_queue = app
+                                .input_queue
+                                .chars()
+                                .skip(app.character_index)
+                                .collect::<String>();
                             app.character_index = 0;
                         }
                     }
@@ -112,6 +117,12 @@ fn duckduckgo(app: &mut App) {
         "go" | "пщ" => {
             queue_commmand("https://aistudio.google.com/prompts/new_chat".to_string());
         }
+        "nix" | "тшч" => {
+            queue_commmand("https://search.nixos.org/packages?channel=unstable".to_string());
+        }
+        "tr" | "ек" => {
+            queue_commmand("https://translate.google.com/?hl=en".to_string());
+        }
         "re" | "ку" => {
             queue_commmand("https://old.reddit.com/".to_string());
         }
@@ -159,11 +170,15 @@ fn duckduckgo(app: &mut App) {
 }
 
 fn nixos(app: &mut App) {
-    Command::new(BROWSER)
-            .arg("--new-window")
-            .arg("https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue)
-            .status()
-            .expect("panic!");
+    let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue;
+
+    let command = format!("swaymsg exec 'zen --new-window '{query}''");
+
+    Command::new("bash")
+        .arg("-c")
+        .arg(command)
+        .status()
+        .expect("panic!");
 
     app.app_state = AppState::Quit;
 }
@@ -177,15 +192,17 @@ fn translate(app: &mut App) {
         }
     };
 
-    Command::new(BROWSER)
-        .arg("--new-window")
-        .arg(
-            "https://translate.google.com/?hl=en&sl=en&tl=".to_string()
-                + &translate
-                + "&text="
-                + &app.input_queue
-                + "&op=translate",
-        )
+    // FIXME: don't send text
+    let query = format!(
+        "https://translate.google.com/?hl=en&sl=en&tl={translate}&text={0}&op=translate",
+        app.input_queue
+    );
+
+    let command = format!("swaymsg exec 'zen --new-window '{query}''");
+
+    Command::new("bash")
+        .arg("-c")
+        .arg(command)
         .status()
         .expect("panic!");
 
@@ -210,9 +227,11 @@ fn paste(app: &mut App) {
 }
 
 fn queue_commmand(queue: String) {
-    Command::new(BROWSER)
-        .arg("--new-window")
-        .arg(queue)
+    let command = format!("swaymsg exec 'zen --new-window '{queue}''");
+
+    Command::new("bash")
+        .arg("-c")
+        .arg(command)
         .status()
         .expect("panic!");
 }
