@@ -54,6 +54,8 @@ impl App {
             match rc.recv().unwrap() {
                 AppEvent::Key(key_event) => key_proccesing::handle_key_event(&mut self, key_event),
             }
+
+            check_search_engine(&mut self);
         }
 
         Ok(())
@@ -118,4 +120,21 @@ pub fn init_thread(tx: mpsc::Sender<AppEvent>) {
             }
         }
     });
+}
+
+fn check_search_engine(app: &mut App) {
+    let chars: Vec<char> = app.input_queue.chars().take(2).collect();
+
+    match chars.as_slice() {
+        ['!', 'n' | 'N' | 'Т' | 'т'] => {
+            app.app_status = AppStatus::NixOS;
+        }
+        ['!', 't' | 'T' | 'Е' | 'е'] => {
+            app.app_status = AppStatus::Translate;
+        }
+
+        _ => {
+            app.app_status = AppStatus::DuckDuckGo;
+        }
+    }
 }

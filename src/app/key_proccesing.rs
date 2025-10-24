@@ -13,16 +13,11 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         event::KeyCode::Char(ch) => {
             if app.app_state != AppState::Input {
                 match ch {
-                    'd' | 'в' => {
-                        search(app, "duckduckgo".to_string());
-                    }
-                    'n' | 'т' => {
-                        search(app, "nixos".to_string());
-                    }
-                    't' | 'е' => {
-                        search(app, "translate".to_string());
-                    }
                     'i' | 'ш' => app.app_state = AppState::Input,
+                    'a' | 'ф' => {
+                        app.character_index += 1;
+                        app.app_state = AppState::Input;
+                    }
                     'p' | 'з' => paste(app),
 
                     'l' | 'д' => move_cursor_right(app),
@@ -162,7 +157,7 @@ fn duckduckgo(app: &mut App) {
             queue_commmand("https://mangadex.org/titles/follows".to_string());
         }
         _ => {
-            queue_commmand("https://www.duckduckgo.com/search?q=".to_string() + &app.input_queue);
+            queue_commmand("https://html.duckduckgo.com/html/?q=".to_string() + &app.input_queue);
         }
     }
 
@@ -170,9 +165,10 @@ fn duckduckgo(app: &mut App) {
 }
 
 fn nixos(app: &mut App) {
-    let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue;
+    // let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue;
+    let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue.chars().skip(3).collect::<String>();
 
-    let command = format!("swaymsg exec 'zen --new-window '{query}''");
+    let command = format!("{SWAY} exec \"{BROWSER} --new-window '{query}'\"");
 
     Command::new("bash")
         .arg("-c")
@@ -192,13 +188,12 @@ fn translate(app: &mut App) {
         }
     };
 
-    // FIXME: don't send text
     let query = format!(
         "https://translate.google.com/?hl=en&sl=en&tl={translate}&text={0}&op=translate",
-        app.input_queue
+        app.input_queue.chars().skip(3).collect::<String>()
     );
 
-    let command = format!("swaymsg exec 'zen --new-window '{query}''");
+    let command = format!("{SWAY} exec \"{BROWSER} --new-window '{query}'\"");
 
     Command::new("bash")
         .arg("-c")
@@ -227,32 +222,11 @@ fn paste(app: &mut App) {
 }
 
 fn queue_commmand(queue: String) {
-    let command = format!("swaymsg exec 'zen --new-window '{queue}''");
+    let command = format!("{SWAY} exec \"{BROWSER} --new-window '{queue}'\"");
 
     Command::new("bash")
         .arg("-c")
         .arg(command)
         .status()
         .expect("panic!");
-}
-
-fn search(app: &mut App, search: String) {
-    match search.as_str() {
-        "duckduckgo" => {
-            app.app_status = AppStatus::DuckDuckGo;
-            app.app_state = AppState::Input;
-            app.character_index = app.input_queue.chars().count();
-        }
-        "nixos" => {
-            app.app_status = AppStatus::NixOS;
-            app.app_state = AppState::Input;
-            app.character_index = app.input_queue.chars().count();
-        }
-        "translate" => {
-            app.app_status = AppStatus::Translate;
-            app.app_state = AppState::Input;
-            app.character_index = app.input_queue.chars().count();
-        }
-        _ => (),
-    }
 }
