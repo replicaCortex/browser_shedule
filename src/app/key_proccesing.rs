@@ -1,5 +1,5 @@
 const BROWSER: &str = "zen";
-const SWAY: &str = "swaymsg";
+const NIRI: &str = "niri msg action spawn -- ";
 
 use super::{App, AppState, AppStatus};
 
@@ -157,7 +157,13 @@ fn duckduckgo(app: &mut App) {
             queue_commmand("https://mangadex.org/titles/follows".to_string());
         }
         _ => {
-            queue_commmand("https://html.duckduckgo.com/html/?q=".to_string() + &app.input_queue);
+            if app.input_queue.contains("https://") || app.input_queue.contains("http://") {
+                queue_commmand(app.input_queue.clone());
+            } else {
+                queue_commmand(
+                    "https://html.duckduckgo.com/html/?q=".to_string() + &app.input_queue,
+                );
+            }
         }
     }
 
@@ -165,10 +171,9 @@ fn duckduckgo(app: &mut App) {
 }
 
 fn nixos(app: &mut App) {
-    // let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue;
-    let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &app.input_queue.chars().skip(3).collect::<String>();
+    let query = "https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=".to_string() + &text_get(&app.input_queue);
 
-    let command = format!("{SWAY} exec \"{BROWSER} --new-window '{query}'\"");
+    let command = format!("{NIRI} {BROWSER} --new-window '{query}'");
 
     Command::new("bash")
         .arg("-c")
@@ -180,8 +185,10 @@ fn nixos(app: &mut App) {
 }
 
 fn translate(app: &mut App) {
-    let translate = {
-        if app.input_queue.chars().any(|c| c.is_ascii_alphabetic()) {
+    let text: String = text_get(&app.input_queue);
+
+    let translate_to = {
+        if text.chars().any(|c| c.is_ascii_alphabetic()) {
             "ru".to_string()
         } else {
             "en".to_string()
@@ -189,11 +196,11 @@ fn translate(app: &mut App) {
     };
 
     let query = format!(
-        "https://translate.google.com/?hl=en&sl=en&tl={translate}&text={0}&op=translate",
-        app.input_queue.chars().skip(3).collect::<String>()
+        "https://translate.google.com/?hl=en&sl=en&tl={translate_to}&text={0}&op=translate",
+        text
     );
 
-    let command = format!("{SWAY} exec \"{BROWSER} --new-window '{query}'\"");
+    let command = format!("{NIRI} {BROWSER} --new-window '{query}'");
 
     Command::new("bash")
         .arg("-c")
@@ -204,7 +211,11 @@ fn translate(app: &mut App) {
     app.app_state = AppState::Quit;
 }
 
-fn paste(app: &mut App) {
+fn text_get(input: &str) -> String {
+    input.chars().skip(3).clone().collect()
+}
+
+pub fn paste(app: &mut App) {
     let output = Command::new("wl-paste").output().expect("wl-paste error");
 
     if output.status.success() {
@@ -222,7 +233,7 @@ fn paste(app: &mut App) {
 }
 
 fn queue_commmand(queue: String) {
-    let command = format!("{SWAY} exec \"{BROWSER} --new-window '{queue}'\"");
+    let command = format!("{NIRI} {BROWSER} --new-window '{queue}'");
 
     Command::new("bash")
         .arg("-c")

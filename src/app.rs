@@ -13,8 +13,11 @@ use ratatui::crossterm::event::Event;
 use ratatui::crossterm::event::{self, KeyEvent};
 use ratatui::prelude::*;
 
+use crate::app::key_proccesing::paste;
+
 pub enum AppEvent {
     Key(KeyEvent),
+    Paste(),
 }
 
 #[derive(Default, PartialEq)]
@@ -51,8 +54,13 @@ impl App {
         while self.is_runing() {
             terminal.draw(|frame| Self::render_ui(&self, frame))?;
 
-            match rc.recv().unwrap() {
-                AppEvent::Key(key_event) => key_proccesing::handle_key_event(&mut self, key_event),
+            match rc.try_recv() {
+                Ok(AppEvent::Key(key_event)) => {
+                    key_proccesing::handle_key_event(&mut self, key_event)
+                }
+
+                Ok(AppEvent::Paste()) => paste(&mut self),
+                Err(_) => (),
             }
 
             check_search_engine(&mut self);
@@ -115,8 +123,15 @@ pub fn init_app_and_terminal() -> (App, DefaultTerminal) {
 pub fn init_thread(tx: mpsc::Sender<AppEvent>) {
     thread::spawn(move || {
         loop {
-            if let Event::Key(key) = event::read().unwrap() {
-                tx.send(AppEvent::Key(key)).unwrap();
+            match event::read().unwrap() {
+                Event::Key(key) => {
+                    tx.send(AppEvent::Key(key)).unwrap();
+                }
+
+                Event::Paste(..) => {
+                    tx.send(AppEvent::Paste()).unwrap();
+                }
+                _ => (),
             }
         }
     });

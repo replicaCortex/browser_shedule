@@ -1,6 +1,5 @@
 {
   pkgs ? import <nixpkgs> { },
-  mode ? "dev",
 }:
 let
   rust = with pkgs; [
@@ -11,20 +10,8 @@ let
     clippy
 
     gdb
-  ];
-
-  multiplex = with pkgs; [
     rust-analyzer
-    ra-multiplex
-    wayland
-    pkg-config
-  ] ++ rust;
-
-  server_start = ''
-    alias kr="pgrep 'ra-multiplex' | xargs kill"
-    alias sr="ra-multiplex server & nvim --headless src/*.rs"
-    sr
-  '';
+  ];
 
   aliases = ''
     alias cr="cargo run"
@@ -36,7 +23,7 @@ let
   '';
 in
 pkgs.mkShell {
-  buildInputs = if mode == "server" then multiplex else rust;
+  buildInputs = rust;
 
-  shellHook = if mode == "server" then server_start else aliases;
+  shellHook = aliases;
 }

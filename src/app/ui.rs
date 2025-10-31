@@ -19,6 +19,8 @@ pub fn render_tip(area: Rect, buf: &mut Buffer, app: &App) {
             "du" | "вг" => String::from("  Duck Ai!"),
             "2ch" | "2ср" => String::from("󱐋  2ch!"),
             "git" | "пше" => String::from("  GitHub!"),
+            "w" | "ц" => String::from("  Whatapp!"),
+            "de" | "ву" => String::from("  Deepseek!"),
             "sdo" | "ывщ" => String::from("  Sdo..."),
             _ => match app.app_status {
                 super::AppStatus::DuckDuckGo => String::from("󰇥  DuckDuckGo!"),
@@ -39,27 +41,25 @@ pub fn render_input(area: Rect, buf: &mut Buffer, app: &App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-            .title_top({
-
-        let output = std::process::Command::new("bash")
-            .arg("-c")
-            .arg("swaymsg -t get_inputs | jq -r '.[] | select(.type==\"keyboard\") | .xkb_active_layout_name' | tail -n 1")
-            .output().expect("error get layout name");
-
+        .title_top({
+            let output = std::process::Command::new("bash")
+                .arg("-c")
+                .arg("niri msg -j keyboard-layouts | jq .current_idx")
+                .output()
+                .expect("error get layout name");
 
             if output.status.success() {
                 let output = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
-                if output == "English (US)" {
+                if output == "0" {
                     String::from("English")
                 } else {
-                    output
+                    String::from("Russia")
                 }
             } else {
                 panic!("error get layout name");
             }
-
-            })
+        })
         .title_bottom({
             if app.app_state == AppState::Input {
                 String::from("input")
@@ -89,11 +89,13 @@ fn get_style(app: &App) -> ratatui::prelude::Style {
                     "du" | "вг" => Some(Color::Yellow),
                     "git" | "пше" => Some(Color::LightMagenta),
                     "2ch" | "2ср" => Some(Color::Rgb(254, 145, 18)),
+                    "w" | "ц" => Some(Color::LightGreen),
+                    "de" | "ву" => Some(Color::LightBlue),
                     "sdo" | "ывщ" => Some(Color::Gray),
                     _ => match app.app_status {
                         super::AppStatus::DuckDuckGo => Some(Color::LightYellow),
                         super::AppStatus::NixOS => Some(Color::Blue),
-                        super::AppStatus::Translate => Some(Color::LightRed),
+                        super::AppStatus::Translate => Some(Color::White),
                     },
                 }
             } else {
